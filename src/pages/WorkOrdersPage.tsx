@@ -15,7 +15,7 @@ type Unit = {
 type WorkOrder = {
   id: number;
   unit_id: number;
-  unit_number?: string; // backend may already join; if not, we map it
+  unit_number?: string;
   title: string;
   complaint: string;
   priority: Priority;
@@ -31,18 +31,17 @@ export default function WorkOrdersPage() {
 
   const [activeTab, setActiveTab] = useState<WorkOrderStatus>("pending");
 
-  // data sets
+  // data
   const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
   const [units, setUnits] = useState<Unit[]>([]);
 
-  // page states
+  // states
   const [woLoading, setWoLoading] = useState(true);
   const [woError, setWoError] = useState<string | null>(null);
-
   const [unitsLoading, setUnitsLoading] = useState(true);
   const [unitsError, setUnitsError] = useState<string | null>(null);
 
-  // modal state
+  // modal/form
   const [openModal, setOpenModal] = useState(false);
   const [formUnitId, setFormUnitId] = useState<number | "">("");
   const [formTitle, setFormTitle] = useState("");
@@ -54,7 +53,6 @@ export default function WorkOrdersPage() {
   const canCreate =
     formUnitId !== "" && formTitle.trim() !== "" && formComplaint.trim() !== "";
 
-  // ------- data loaders -------
   async function loadWorkOrders() {
     setWoLoading(true);
     setWoError(null);
@@ -84,12 +82,10 @@ export default function WorkOrdersPage() {
   }
 
   useEffect(() => {
-    // load both datasets; units used by the create modal + mapping
     loadUnits();
     loadWorkOrders();
   }, []);
 
-  // map unit_number if backend doesn't include it in work_orders list
   const unitMap = useMemo(() => {
     const m = new Map<number, Unit>();
     for (const u of units) m.set(u.id, u);
@@ -122,7 +118,6 @@ export default function WorkOrdersPage() {
         }),
       });
 
-      // reset + refresh
       setOpenModal(false);
       setFormUnitId("");
       setFormTitle("");
@@ -152,7 +147,6 @@ export default function WorkOrdersPage() {
         </button>
       </header>
 
-      {/* Tabs */}
       <div className="mb-4">
         <div className="inline-flex rounded-xl bg-gray-100 p-1">
           {[
@@ -176,7 +170,6 @@ export default function WorkOrdersPage() {
         </div>
       </div>
 
-      {/* Content */}
       <div className="rounded-xl border p-4 bg-white">
         {woLoading ? (
           <div className="text-gray-500">Loading work orders…</div>
@@ -188,4 +181,178 @@ export default function WorkOrdersPage() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <
+                <tr className="text-left text-gray-500">
+                  <th className="py-2 pr-4">Unit</th>
+                  <th className="py-2 pr-4">Title</th>
+                  <th className="py-2 pr-4">Complaint</th>
+                  <th className="py-2 pr-4">Priority</th>
+                  <th className="py-2 pr-4">Status</th>
+                  <th className="py-2 pr-4">Opened</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map((w) => (
+                  <tr key={w.id} className="border-t">
+                    <td className="py-2 pr-4 font-medium">{w.unit_number}</td>
+                    <td className="py-2 pr-4">{w.title}</td>
+                    <td className="py-2 pr-4 text-gray-700">
+                      {w.complaint?.slice(0, 80) || "—"}
+                    </td>
+                    <td className="py-2 pr-4">
+                      <span
+                        className={`px-2 py-0.5 rounded-full text-xs ${
+                          w.priority === "high"
+                            ? "bg-red-100 text-red-700"
+                            : w.priority === "medium"
+                            ? "bg-amber-100 text-amber-700"
+                            : "bg-green-100 text-green-700"
+                        }`}
+                      >
+                        {w.priority}
+                      </span>
+                    </td>
+                    <td className="py-2 pr-4 capitalize">{w.status}</td>
+                    <td className="py-2 pr-4">
+                      {w.opened_at
+                        ? new Date(w.opened_at).toLocaleString()
+                        : "—"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {openModal && (
+        <div className="fixed inset-0 bg-black/50 grid place-items-center z-50">
+          <div className="w-full max-w-xl rounded-2xl bg-white p-6 shadow-xl">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-xl font-semibold">Create Work Order</h2>
+              <button
+                onClick={() => setOpenModal(false)}
+                className="text-gray-500 hover:text-black"
+                aria-label="Close"
+              >
+                ✕
+              </button>
+            </div>
+
+            <p className="text-sm text-gray-500 mb-4">
+              Minimal details for now. You can edit later.
+            </p>
+
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm text-gray-600">Unit</label>
+                <select
+                  className="mt-1 w-full border rounded-lg p-2"
+                  value={formUnitId}
+                  onChange={(e) =>
+                    setFormUnitId(
+                      e.target.value === "" ? "" : Number(e.target.value)
+                    )
+                  }
+                >
+                  <option value="">Select unit</option>
+                  {unitsLoading ? (
+                    <option>Loading…</option>
+                  ) : unitsError ? (
+                    <option disabled>Failed to load units</option>
+                  ) : (
+                    units.map((u) => (
+                      <option key={u.id} value={u.id}>
+                        {u.unit_number} {u.type ? `• ${u.type}` : ""}
+                      </option>
+                    ))
+                  )}
+                </select>
+              </div>
+
+              <div>
+                <label className="text-sm text-gray-600">Title</label>
+                <input
+                  className="mt-1 w-full border rounded-lg p-2"
+                  placeholder="e.g. Brake inspection"
+                  value={formTitle}
+                  onChange={(e) => setFormTitle(e.target.value)}
+                />
+              </div>
+
+              <div>
+                <label className="text-sm text-gray-600">Complaint</label>
+                <textarea
+                  className="mt-1 w-full border rounded-lg p-2"
+                  placeholder="Driver notes…"
+                  rows={3}
+                  value={formComplaint}
+                  onChange={(e) => setFormComplaint(e.target.value)}
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className="text-sm text-gray-600">Priority</label>
+                  <select
+                    className="mt-1 w-full border rounded-lg p-2"
+                    value={formPriority}
+                    onChange={(e) => setFormPriority(e.target.value as Priority)}
+                  >
+                    <option value="low">low</option>
+                    <option value="medium">medium</option>
+                    <option value="high">high</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-sm text-gray-600">Category</label>
+                  <select
+                    className="mt-1 w-full border rounded-lg p-2"
+                    value={formCategory}
+                    onChange={(e) => setFormCategory(e.target.value)}
+                  >
+                    <option>Other</option>
+                    <option>PM Service</option>
+                    <option>Engine</option>
+                    <option>Brakes</option>
+                    <option>Electrical</option>
+                    <option>Reefer</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-sm text-gray-600">Bay (optional)</label>
+                  <input
+                    className="mt-1 w-full border rounded-lg p-2"
+                    placeholder="e.g. Bay 1"
+                    value={formBay}
+                    onChange={(e) => setFormBay(e.target.value)}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-6 flex items-center justify-end gap-2">
+              <button
+                onClick={() => setOpenModal(false)}
+                className="px-4 py-2 rounded-xl border"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleCreate}
+                disabled={!canCreate}
+                className={`px-4 py-2 rounded-xl shadow ${
+                  canCreate ? "bg-black text-white" : "bg-gray-300 text-gray-600"
+                }`}
+              >
+                Create
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

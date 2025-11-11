@@ -6,7 +6,7 @@ type Unit = {
   unit_number: string;
   type?: string;
   odometer?: number | null;
-  status?: string;
+  status?: string | null;
 };
 
 export default function UnitsPage() {
@@ -22,9 +22,9 @@ export default function UnitsPage() {
     try {
       const data = (await api("/units")) as Unit[];
       setUnits(data);
-    } catch (e: any) {
-      console.error(e);
-      setError("Failed to load units");
+    } catch (err: any) {
+      console.error(err);
+      setError("Failed to load units.");
     } finally {
       setLoading(false);
     }
@@ -35,10 +35,18 @@ export default function UnitsPage() {
   }, []);
 
   return (
-    <div className="p-6 max-w-5xl mx-auto">
-      <h1 className="text-2xl font-semibold mb-6">Units</h1>
+    <div className="p-6 max-w-6xl mx-auto">
+      <header className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-semibold">Units</h1>
+        <button
+          onClick={loadUnits}
+          className="px-4 py-2 rounded-2xl shadow bg-black text-white"
+        >
+          Refresh
+        </button>
+      </header>
 
-      <div className="rounded-xl border p-4 bg-white">
+      <div className="rounded-xl border bg-white p-4">
         {loading ? (
           <div className="text-gray-500">Loading units…</div>
         ) : error ? (
@@ -49,7 +57,7 @@ export default function UnitsPage() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-left text-gray-500">
+                <tr className="text-left text-gray-500 border-b">
                   <th className="py-2 pr-4">Unit #</th>
                   <th className="py-2 pr-4">Type</th>
                   <th className="py-2 pr-4">Odometer</th>
@@ -60,13 +68,17 @@ export default function UnitsPage() {
                 {units.map((u) => (
                   <tr key={u.id} className="border-t">
                     <td className="py-2 pr-4 font-medium">{u.unit_number}</td>
-                    <td className="py-2 pr-4">{u.type ?? "—"}</td>
+                    <td className="py-2 pr-4 text-gray-700">
+                      {u.type || "—"}
+                    </td>
                     <td className="py-2 pr-4">
-                      {typeof u.odometer === "number"
-                        ? u.odometer.toLocaleString()
+                      {u.odometer !== null && u.odometer !== undefined
+                        ? `${u.odometer.toLocaleString()} km`
                         : "—"}
                     </td>
-                    <td className="py-2 pr-4 capitalize">{u.status ?? "—"}</td>
+                    <td className="py-2 pr-4 capitalize">
+                      {u.status || "unknown"}
+                    </td>
                   </tr>
                 ))}
               </tbody>

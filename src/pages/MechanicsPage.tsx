@@ -1,26 +1,53 @@
 import { useQuery } from "@tanstack/react-query";
-import { api } from "../lib/api";
-import { Card } from "@/components/ui/card";
+import api from "@/lib/api";
 
-type Mechanic = { id:number; name:string; hourly_rate:string };
+type Mechanic = {
+  id: number;
+  name: string;
+  email?: string | null;
+  status?: string | null;
+};
 
 export default function MechanicsPage() {
-  const { data, isLoading, error } = useQuery({
+  const { data = [], isLoading, error } = useQuery<Mechanic[], Error>({
     queryKey: ["mechanics"],
-    queryFn: async () => (await api.get<Mechanic[]>("/mechanics")).data,
+    queryFn: api.getMechanicsQF,
   });
 
-  if (isLoading) return <div className="p-6">Loading mechanics…</div>;
-  if (error) return <div className="p-6 text-red-600">Failed to load mechanics</div>;
-
   return (
-    <div className="p-6 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-      {data!.map(m => (
-        <Card key={m.id} className="p-4 hover:shadow-xl transition">
-          <div className="text-xl font-semibold">{m.name}</div>
-          <div className="opacity-80">Rate: ${Number(m.hourly_rate).toFixed(2)}/hr</div>
-        </Card>
-      ))}
+    <div className="p-6 max-w-6xl mx-auto">
+      <h1 className="text-2xl font-semibold mb-6">Mechanics</h1>
+
+      <div className="rounded-xl border bg-white p-4">
+        {isLoading ? (
+          <div className="text-gray-500">Loading mechanics…</div>
+        ) : error ? (
+          <div className="text-red-600">Failed to load mechanics.</div>
+        ) : (data || []).length === 0 ? (
+          <div className="text-gray-600">No mechanics found.</div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-gray-500 border-b">
+                  <th className="py-2 pr-4">Name</th>
+                  <th className="py-2 pr-4">Email</th>
+                  <th className="py-2 pr-4">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.map((m) => (
+                  <tr key={m.id} className="border-t">
+                    <td className="py-2 pr-4 font-medium">{m.name}</td>
+                    <td className="py-2 pr-4">{m.email ?? "—"}</td>
+                    <td className="py-2 pr-4 capitalize">{m.status ?? "active"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
